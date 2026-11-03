@@ -69,12 +69,3 @@ Deeplinks are also supported, read the [documentation](https://throneproj.github
 - [SagerNet/SagerNet](https://github.com/SagerNet/SagerNet)
 - [shadowsocks/shadowsocks-android](https://github.com/shadowsocks/shadowsocks-android)
 
-## Supporting Throne
-
-If Throne is useful to you, you can support its development through [GitHub Sponsors](https://github.com/sponsors/Mahdi-zarei) or with a crypto donation to one of these addresses:
-
-| Coin | Network | Address |
-|:--|:--|:--|
-| **USDT** · **TRX** | TRON (TRC20) | `THR2gbWMaTZh8ACk3VYAAyNRVffvdTRikj` |
-| **USDT** · **USDC** | BNB Smart Chain (BEP20) · Ethereum (ERC20) | `0x7c2dF1867f5AaEE807a835fB3c55E4de4507888A` |
-| **XMR** | Monero | `4AYwwN8qMQCSUb3XfwzfrLNPMHfDme6U7CmNtQY4idCF8GtHHLG68VA3iZK867ypuKFr8J7CjXiJ96eFUA2T6aLVRUbgY3A` |
