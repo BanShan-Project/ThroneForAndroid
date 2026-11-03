@@ -1,3 +1,8 @@
+#### 2.0.6
+
+* 半山代理
+
+
 #### 2.0.5
 
 * Add per-group routing profiles **1**
