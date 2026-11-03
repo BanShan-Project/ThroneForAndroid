@@ -510,7 +510,6 @@
     <string name="edit_as_json">Rediger som JSON</string>
     <string name="raw_json_invalid">JSON-en er ikke en gyldig profil av denne typen</string>
     <string name="project_website">Prosjektets nettsted</string>
-    <string name="support_throne">Støtt Throne</string>
     <string name="tri_state_default">Behold standard</string>
     <string name="tri_state_on">På</string>
     <string name="tri_state_off">Av</string>

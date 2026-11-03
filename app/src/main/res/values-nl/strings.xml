@@ -506,7 +506,6 @@
     <string name="edit_as_json">Bewerken als JSON</string>
     <string name="raw_json_invalid">De JSON is geen geldig profiel van dit type</string>
     <string name="project_website">Projectwebsite</string>
-    <string name="support_throne">Throne steunen</string>
     <string name="tri_state_default">Standaard behouden</string>
     <string name="tri_state_on">Aan</string>
     <string name="tri_state_off">Uit</string>

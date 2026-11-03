@@ -563,7 +563,7 @@
     <string name="backup_error_nothing">此备份文件不包含任何可恢复的数据。</string>
     <string name="backup_error_version">不支持的备份格式版本：%d。\n此备份可能由更新版本的应用创建。</string>
     <string name="backup_failed">创建备份失败：%s</string>
-    <string name="backup_local_summary">备份使用 Throne 桌面版格式（.thrbackup）：任一端应用都可恢复。WebDAV 凭据保存在本设备。</string>
+    <string name="backup_local_summary">备份使用 Throne 桌面版格式（.thrbackup）：任一端应用都可恢复。WebDAV 凭据保存在本设备。登录账号的订阅和节点不会写入备份。</string>
     <string name="backup_open_label">恢复 Throne 备份</string>
     <string name="backup_part_otp">OTP 配置（Android 上不恢复）</string>
     <string name="backup_part_profiles">配置（分组与代理）</string>
@@ -580,7 +580,7 @@
     <string name="backup_restore_header">备份创建于 %1$s（%2$s）。\n选择要恢复的部分：</string>
     <string name="backup_restore_select_part">请至少选择一个要恢复的部分。</string>
     <string name="backup_restore_title">恢复备份</string>
-    <string name="backup_restore_warning">每个选中的部分都会替换当前数据，此操作无法撤销。\nThrone 将重启以完成恢复。</string>
+    <string name="backup_restore_warning">每个选中的部分都会替换当前数据，此操作无法撤销。\n登录订阅不会从备份恢复：它保留在本设备，恢复后重新从服务器获取节点。\n半山代理将重启以完成恢复。</string>
     <string name="backup_restored">备份恢复成功。Throne 即将重启以使更改生效。</string>
     <string name="backup_restored_warnings">备份已恢复。Throne 即将重启以使更改生效。\n\n注意：\n%s</string>
     <string name="backup_restoring">正在恢复…</string>
@@ -989,7 +989,7 @@
     <string name="profiles_test_url">URL 测试</string>
     <string name="profiles_update_subscription">更新订阅</string>
     <string name="project_website">项目网站</string>
-    <string name="support_throne">支持 Throne</string>
+    <string name="banshan_telegram">加入 Telegram 群组</string>
     <string name="quic_idle_timeout">空闲超时</string>
     <string name="quic_initial_packet_size">初始包大小</string>
     <string name="quic_keep_alive_period">保活周期</string>
@@ -2447,4 +2447,8 @@
     <string name="banshan_account_unknown">已登录</string>
     <string name="banshan_login_subtitle_relogin">登录新账号后，旧账号的节点会被删除并替换。</string>
     <string name="banshan_login_no_nodes">该账号没有可用节点</string>
+    <string name="backup_warn_login_kept">登录订阅不在备份中，已保留，并会重新从服务器获取节点。</string>
+    <string name="backup_warn_login_ignored">备份中的登录订阅和节点已忽略。</string>
+    <string name="backup_warn_login_lost">登录订阅未能保留，请重新登录。</string>
+    <string name="backup_error_login_data">备份中包含登录订阅，登录订阅不会被恢复。</string>
 </resources>

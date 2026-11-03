@@ -297,7 +297,7 @@
     <string name="backup_error_nothing">此備份檔案不包含任何可恢復的數據。</string>
     <string name="backup_error_version">不支持的備份格式版本：%d。\n此備份可能由更新版本的應用建立。</string>
     <string name="backup_failed">建立備份失敗：%s</string>
-    <string name="backup_local_summary">備份使用 Throne 桌面版格式（.thrbackup）：任一端應用都可恢復。WebDAV 憑據儲存在本裝置。</string>
+    <string name="backup_local_summary">備份使用 Throne 桌面版格式（.thrbackup）：任一端應用都可恢復。WebDAV 憑據儲存在本裝置。登入帳號的訂閱和節點不會寫入備份。</string>
     <string name="backup_open_label">恢復 Throne 備份</string>
     <string name="backup_part_otp">OTP 配置（Android 上不恢復）</string>
     <string name="backup_part_profiles">配置（分組與代理）</string>
@@ -314,7 +314,7 @@
     <string name="backup_restore_header">備份建立於 %1$s（%2$s）。\n選擇要恢復的部分：</string>
     <string name="backup_restore_select_part">請至少選擇一個要恢復的部分。</string>
     <string name="backup_restore_title">恢復備份</string>
-    <string name="backup_restore_warning">每個選中的部分都會替換當前數據，此操作無法撤銷。\nThrone 將重啟以完成恢復。</string>
+    <string name="backup_restore_warning">每個選中的部分都會替換當前數據，此操作無法撤銷。\n登入訂閱不會從備份恢復：它保留在本裝置，恢復後重新從伺服器取得節點。\n半山代理將重啟以完成恢復。</string>
     <string name="backup_restored">備份恢復成功。Throne 即將重啟以使更改生效。</string>
     <string name="backup_restored_warnings">備份已恢復。Throne 即將重啟以使更改生效。\n\n注意：\n%s</string>
     <string name="backup_restoring">正在恢復…</string>
@@ -721,7 +721,7 @@
     <string name="profiles_test_url">URL 測試</string>
     <string name="profiles_update_subscription">更新訂閱</string>
     <string name="project_website">專案網站</string>
-    <string name="support_throne">支持 Throne</string>
+    <string name="banshan_telegram">加入 Telegram 群組</string>
     <string name="quic_idle_timeout">空閒超時</string>
     <string name="quic_initial_packet_size">初始包大小</string>
     <string name="quic_keep_alive_period">保活週期</string>
@@ -2432,4 +2432,7 @@
     <string name="banshan_account_unknown">已登入</string>
     <string name="banshan_login_subtitle_relogin">登入新帳號後，舊帳號的節點會被刪除並替換。</string>
     <string name="banshan_login_no_nodes">該帳號沒有可用節點</string>
+    <string name="backup_warn_login_kept">登入訂閱不在備份中，已保留，並會重新從伺服器取得節點。</string>
+    <string name="backup_warn_login_ignored">備份中的登入訂閱和節點已忽略。</string>
+    <string name="backup_warn_login_lost">登入訂閱未能保留，請重新登入。</string>
 </resources>

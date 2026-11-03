@@ -926,7 +926,6 @@
     <string name="profiles_test_url">URL-тест</string>
     <string name="profiles_update_subscription">Оновити підписку</string>
     <string name="project_website">Сайт проєкту</string>
-    <string name="support_throne">Підтримати Throne</string>
     <string name="quic_idle_timeout">Тайм-аут простою</string>
     <string name="quic_initial_packet_size">Початковий розмір пакета</string>
     <string name="quic_keep_alive_period">Період keep-alive</string>

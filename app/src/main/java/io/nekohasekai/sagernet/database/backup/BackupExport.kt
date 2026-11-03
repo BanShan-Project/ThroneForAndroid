@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 import io.nekohasekai.sagernet.BuildConfig
 import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.banshan.BanShanCrypto
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.MarkerEntity
 import io.nekohasekai.sagernet.database.SagerDatabase
@@ -109,36 +110,88 @@ object BackupExport {
                 return live.query("SELECT ${quoted(columns)} FROM `$table` ORDER BY $order").use { it.readTable(columns) }
             }
 
+            // The login subscription is never part of a backup: neither its group, its servers nor the routing
+            // profile it provided. Its address is the account's credential, and the servers come from its server.
+            val managedGroups = HashSet<Long>()
+            live.query("SELECT `id` FROM `groups` WHERE `url` LIKE ?", arrayOf<Any?>(BanShanCrypto.PREFIX + "%")).use { c ->
+                while (c.moveToNext()) managedGroups.add(c.getLong(0))
+            }
+            val managedRoutes = HashSet<Long>()
+            if (managedGroups.isNotEmpty() && live.tableColumns("route_profiles").any { it.name == "source_gid" }) {
+                val sourceGids = managedGroups.joinToString(",")
+                live.query("SELECT `id` FROM `route_profiles` WHERE `source_gid` IN ($sourceGids)").use { c ->
+                    while (c.moveToNext()) managedRoutes.add(c.getLong(0))
+                }
+            }
+
+            val allTabs = ArrayList<Pair<Long, Long>>()
             live.query("SELECT `id`, `display_order` FROM `groups` ORDER BY `display_order`, `id`").use { c ->
-                while (c.moveToNext()) s.tabs.add(c.getLong(0) to c.getLong(1))
+                while (c.moveToNext()) allTabs.add(c.getLong(0) to c.getLong(1))
             }
+            s.tabs.addAll(allTabs.filterNot { it.first in managedGroups })
+            val allMembers = HashMap<Long, MutableList<Long>>()
             live.query("SELECT `gid`, `id` FROM `profiles` ORDER BY `gid`, `user_order`, `id`").use { c ->
-                while (c.moveToNext()) s.members.getOrPut(c.getLong(0)) { ArrayList() }.add(c.getLong(1))
+                while (c.moveToNext()) allMembers.getOrPut(c.getLong(0)) { ArrayList() }.add(c.getLong(1))
             }
-            val routes = ArrayList<Pair<Long, Boolean>>()
+            for ((gid, ids) in allMembers) {
+                if (gid !in managedGroups) s.members[gid] = ids
+            }
+            val allRoutes = ArrayList<Pair<Long, Boolean>>()
             live.query("SELECT `id`, `is_raw` FROM `route_profiles` ORDER BY `id`").use { c ->
-                while (c.moveToNext()) routes.add(c.getLong(0) to (c.getLong(1) != 0L))
+                while (c.moveToNext()) allRoutes.add(c.getLong(0) to (c.getLong(1) != 0L))
             }
+            val routes = allRoutes.filterNot { it.first in managedRoutes }
             val sequences = HashMap<String, Long>()
             runCatching {
                 live.query("SELECT `name`, `seq` FROM `sqlite_sequence`").use { c ->
                     while (c.moveToNext()) sequences[c.getString(0)] = c.getLong(1)
                 }
             }
-            val profileIds = s.members.values.flatten()
-            val groupIds = s.tabs.map { it.first }
-            // Database.cpp keeps entity_ids in every backup; the counters never go below the ids in use.
+            val profileIds = allMembers.values.flatten()
+            val groupIds = allTabs.map { it.first }
+            // Database.cpp keeps entity_ids in every backup; the counters never go below the ids in use. The login
+            // group's ids still count, so a restore can never hand them out again.
             s.counters[PROFILES] = maxOf(sequences[PROFILES] ?: 0L, profileIds.maxOrNull() ?: 0L)
             s.counters[GROUPS] = maxOf(sequences[GROUPS] ?: 0L, groupIds.maxOrNull() ?: 0L)
-            s.counters[ROUTE_PROFILES] = maxOf(sequences[ROUTE_PROFILES] ?: 0L, routes.maxOfOrNull { it.first } ?: 0L)
+            s.counters[ROUTE_PROFILES] = maxOf(sequences[ROUTE_PROFILES] ?: 0L, allRoutes.maxOfOrNull { it.first } ?: 0L)
 
             if (selection.profiles) {
                 s.profiles = copy(PROFILES, "`id`")
                 s.groups = copy(GROUPS, "`display_order`, `id`")
+                s.groups?.let { groups ->
+                    if (managedGroups.isNotEmpty()) {
+                        val id = groups.index("id")
+                        groups.rows.removeAll { (it[id] as? Long) in managedGroups }
+                    }
+                    if (managedRoutes.isNotEmpty()) {
+                        val routeId = groups.index("route_id")
+                        if (routeId >= 0) {
+                            for (row in groups.rows) {
+                                if ((row[routeId] as? Long) in managedRoutes) row[routeId] = -1L
+                            }
+                        }
+                    }
+                }
+                s.profiles?.let { profiles ->
+                    if (managedGroups.isNotEmpty()) {
+                        val gid = profiles.index("gid")
+                        profiles.rows.removeAll { (it[gid] as? Long) in managedGroups }
+                    }
+                }
             }
             if (selection.routes) {
                 s.routeProfiles = copy(ROUTE_PROFILES, "`id`")
                 s.routeRules = copy(ROUTE_RULES, "`route_profile_id`, `rule_order`")
+                if (managedRoutes.isNotEmpty()) {
+                    s.routeProfiles?.let { profiles ->
+                        val id = profiles.index("id")
+                        profiles.rows.removeAll { (it[id] as? Long) in managedRoutes }
+                    }
+                    s.routeRules?.let { rules ->
+                        val owner = rules.index("route_profile_id")
+                        rules.rows.removeAll { (it[owner] as? Long) in managedRoutes }
+                    }
+                }
             }
             if (selection.settings) {
                 val stored = LinkedHashMap<String, String>()
@@ -148,7 +201,12 @@ object BackupExport {
                         stored[key] = c.getString(1) ?: continue
                     }
                 }
-                s.settings = exportedSettings(stored, groupIds, profileIds.toHashSet(), routes)
+                s.settings = exportedSettings(
+                    stored,
+                    s.tabs.map { it.first },
+                    s.members.values.flatten().toHashSet(),
+                    routes,
+                )
                 val markers = copy(MARKERS, "`key`")
                 val keyIndex = markers.index("key")
                 if (markers.rows.none { it[keyIndex] == MarkerEntity.TUN_PRIVATE_RANGES_IPV6 }) {
@@ -178,12 +236,21 @@ object BackupExport {
         fun id(key: String): Long? = stored[key]?.trim()?.toLongOrNull()
 
         val group = id(SettingsRegistry.CURRENT_GROUP.key)?.takeIf { it in groupIds } ?: groupIds.firstOrNull()
+        // A key naming something the backup does not hold (the login subscription's group, above all) must go.
+        out.remove(SettingsRegistry.CURRENT_GROUP.key)
         if (group != null) out[SettingsRegistry.CURRENT_GROUP.key] = group.toString()
 
         val usable = routes.filter { !it.second }.map { it.first }
         val route = id(SettingsRegistry.CURRENT_ROUTE_ID.key)?.takeIf { it in usable }
             ?: usable.firstOrNull() ?: routes.firstOrNull()?.first
+        out.remove(SettingsRegistry.CURRENT_ROUTE_ID.key)
         if (route != null) out[SettingsRegistry.CURRENT_ROUTE_ID.key] = route.toString()
+
+        // Android's own selection keys may not name the login subscription's servers either.
+        for (key in listOf(Key.PROFILE_ID, Key.PROFILE_CURRENT)) {
+            val selected = id(key)
+            if (selected != null && selected !in profileIds) out.remove(key)
+        }
 
         val remember = listOf(Key.PROFILE_ID, Key.PROFILE_CURRENT, REMEMBER_ID).firstNotNullOfOrNull { key ->
             id(key)?.takeIf { it in profileIds }
@@ -250,6 +317,9 @@ object BackupExport {
             check(n == 0L) { "backup check failed: $what ($n)" }
         }
         if (selection.profiles) {
+            // The login subscription must never reach a file, even if the snapshot filtering regresses.
+            val prefix = BanShanCrypto.PREFIX.replace("'", "''")
+            zero("login subscription groups", "SELECT COUNT(*) FROM `$GROUPS` WHERE `url` LIKE '$prefix%'")
             zero("groups without one tab", "SELECT COUNT(*) FROM groups g WHERE (SELECT COUNT(*) FROM groups_order o WHERE o.group_id = g.id) != 1")
             zero("tabs without a group", "SELECT COUNT(*) FROM groups_order o WHERE NOT EXISTS (SELECT 1 FROM groups g WHERE g.id = o.group_id)")
             zero("profiles without a group", "SELECT COUNT(*) FROM profiles p WHERE NOT EXISTS (SELECT 1 FROM groups g WHERE g.id = p.gid)")

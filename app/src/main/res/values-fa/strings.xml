@@ -992,7 +992,6 @@
     <string name="profiles_test_url">آزمایش URL</string>
     <string name="profiles_update_subscription">به‌روزرسانی اشتراک</string>
     <string name="project_website">وب‌سایت پروژه</string>
-    <string name="support_throne">حمایت از Throne</string>
     <string name="quic_idle_timeout">مهلت بیکاری</string>
     <string name="quic_initial_packet_size">اندازه اولیه بسته</string>
     <string name="quic_keep_alive_period">بازه نگهداری اتصال</string>

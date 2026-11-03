@@ -930,7 +930,6 @@
     <string name="profiles_update_subscription">تحديث الاشتراك</string>
 
     <string name="project_website">موقع المشروع</string>
-    <string name="support_throne">ادعم Throne</string>
     <string name="protocol_version">إصدار البروتوكول</string>
     <string name="quic_idle_timeout">مهلة الخمول</string>
     <string name="quic_initial_packet_size">حجم الحزمة الأولي</string>

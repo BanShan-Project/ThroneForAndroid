@@ -514,7 +514,6 @@
     <string name="edit_as_json">JSON olarak düzenle</string>
     <string name="raw_json_invalid">JSON bu tür için geçerli bir profil değil</string>
     <string name="project_website">Proje web sitesi</string>
-    <string name="support_throne">Throne\'u destekle</string>
     <string name="tri_state_default">Varsayılanı koru</string>
     <string name="tri_state_on">Açık</string>
     <string name="tri_state_off">Kapalı</string>

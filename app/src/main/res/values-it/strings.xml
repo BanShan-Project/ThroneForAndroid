@@ -506,7 +506,6 @@
     <string name="edit_as_json">Modifica come JSON</string>
     <string name="raw_json_invalid">Il JSON non è un profilo valido di questo tipo</string>
     <string name="project_website">Sito web del progetto</string>
-    <string name="support_throne">Sostieni Throne</string>
     <string name="tri_state_default">Mantieni predefinito</string>
     <string name="tri_state_on">Attivo</string>
     <string name="tri_state_off">Disattivo</string>

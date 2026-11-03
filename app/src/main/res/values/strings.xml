@@ -565,7 +565,7 @@
     <string name="edit_as_json">Edit as JSON</string>
     <string name="raw_json_invalid">The JSON is not a valid profile of this type</string>
     <string name="project_website">Project website</string>
-    <string name="support_throne">Support Throne</string>
+    <string name="banshan_telegram">Join the Telegram group</string>
     <string name="tri_state_default">Keep default</string>
     <string name="tri_state_on">On</string>
     <string name="tri_state_off">Off</string>
@@ -1685,7 +1685,7 @@
     <string name="backup_part_routes">Routing profiles</string>
     <string name="backup_part_settings">Settings</string>
     <string name="backup_part_otp">OTP profiles (not restored on Android)</string>
-    <string name="backup_local_summary">Backups use the Throne desktop format (.thrbackup): either app restores them. WebDAV credentials stay on this device.</string>
+    <string name="backup_local_summary">Backups use the Throne desktop format (.thrbackup): either app restores them. WebDAV credentials stay on this device. The BanShan login subscription and its servers are never included.</string>
     <string name="backup_create">Create backup</string>
     <string name="backup_restore">Restore</string>
     <string name="backup_select_part">Select at least one part to include in the backup.</string>
@@ -1702,7 +1702,7 @@
     <string name="backup_platform_linux">Linux</string>
     <string name="backup_platform_macos">macOS</string>
     <string name="backup_platform_unknown">unknown platform</string>
-    <string name="backup_restore_warning">Each selected part replaces the current data. This cannot be undone.\nThrone will restart to complete the restore.</string>
+    <string name="backup_restore_warning">Each selected part replaces the current data. This cannot be undone.\nThe BanShan login subscription is never restored from a backup: it is kept on this device and its servers are downloaded again.\nBanShan will restart to complete the restore.</string>
     <string name="backup_restore_select_part">Select at least one part to restore.</string>
     <string name="backup_reading">Reading the backup…</string>
     <string name="backup_restoring">Restoring…</string>
@@ -2686,4 +2686,8 @@
     <string name="banshan_account_unknown">Signed in</string>
     <string name="banshan_login_subtitle_relogin">Signing in with another account replaces the servers of the current one.</string>
     <string name="banshan_login_no_nodes">This account has no servers.</string>
+    <string name="backup_warn_login_kept">The BanShan login subscription is not part of the backup; it was kept and its servers will be downloaded again.</string>
+    <string name="backup_warn_login_ignored">The backup\'s BanShan login subscription and its servers were ignored.</string>
+    <string name="backup_warn_login_lost">The BanShan login subscription could not be kept; sign in again.</string>
+    <string name="backup_error_login_data">The backup contains the login subscription, which is never restored.</string>
 </resources>

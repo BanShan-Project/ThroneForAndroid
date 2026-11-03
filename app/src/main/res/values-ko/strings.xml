@@ -963,7 +963,6 @@
     <string name="profiles_test_url">URL 테스트</string>
     <string name="profiles_update_subscription">구독 업데이트</string>
     <string name="project_website">프로젝트 웹사이트</string>
-    <string name="support_throne">Throne 후원하기</string>
     <string name="quic_idle_timeout">유휴 시간 초과</string>
     <string name="quic_initial_packet_size">초기 패킷 크기</string>
     <string name="quic_keep_alive_period">킵얼라이브 주기</string>

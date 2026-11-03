@@ -510,7 +510,6 @@
     <string name="edit_as_json">Sunting sebagai JSON</string>
     <string name="raw_json_invalid">JSON bukan profil yang valid untuk jenis ini</string>
     <string name="project_website">Situs web proyek</string>
-    <string name="support_throne">Dukung Throne</string>
     <string name="tri_state_default">Pertahankan default</string>
     <string name="tri_state_on">Aktif</string>
     <string name="tri_state_off">Nonaktif</string>

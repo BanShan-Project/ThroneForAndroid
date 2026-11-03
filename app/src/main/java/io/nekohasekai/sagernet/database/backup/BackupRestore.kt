@@ -5,10 +5,15 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.banshan.BanShanCrypto
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.database.DataStore
+import io.nekohasekai.sagernet.database.GroupRepo
+import io.nekohasekai.sagernet.database.ProxyGroup
 import io.nekohasekai.sagernet.database.RouteManager
 import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.database.SettingsRegistry
+import io.nekohasekai.sagernet.database.SubUserInfo
 import io.nekohasekai.sagernet.database.backup.DesktopSchema.ENTITY_IDS
 import io.nekohasekai.sagernet.database.backup.DesktopSchema.GROUPS
 import io.nekohasekai.sagernet.database.backup.DesktopSchema.GROUPS_ORDER
@@ -18,7 +23,9 @@ import io.nekohasekai.sagernet.database.backup.DesktopSchema.ROUTE_PROFILES
 import io.nekohasekai.sagernet.database.backup.DesktopSchema.ROUTE_RULES
 import io.nekohasekai.sagernet.database.backup.DesktopSchema.SETTINGS
 import io.nekohasekai.sagernet.group.RemoteRouteUpdater
+import io.nekohasekai.sagernet.group.SubscriptionClient
 import io.nekohasekai.sagernet.group.SubscriptionScheduler
+import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
 import io.nekohasekai.sagernet.outbound.json.JsonArray
 import io.nekohasekai.sagernet.outbound.json.JsonInput
@@ -71,8 +78,23 @@ object BackupRestore {
         try {
             val warnings = ArrayList<String>()
             if (choice.any()) {
+                // The login subscription is not part of any backup. A profiles restore clears the groups table, so
+                // the current group is remembered here and put back afterwards from this device's own address.
+                val managed = if (choice.profiles) BanShanSession.managedGroup() else null
+                val managedWasCurrent = managed != null &&
+                    runCatching { GroupRepo.currentId() }.getOrNull() == managed.id
                 val staged = stage(backup.database, choice, warnings)
                 commit(staged, choice, backup.contents.isAndroid, warnings)
+                if (managed != null) {
+                    if (keepManagedGroup(managed, managedWasCurrent)) {
+                        warnings.add(app.getString(R.string.backup_warn_login_kept))
+                    } else {
+                        warnings.add(app.getString(R.string.backup_warn_login_lost))
+                    }
+                }
+                if (staged.managedGroupsSkipped > 0) {
+                    warnings.add(app.getString(R.string.backup_warn_login_ignored))
+                }
                 if (choice.profiles || choice.settings) SubscriptionScheduler.schedule()
                 if (choice.settings) RemoteRouteUpdater.schedule()
             }
@@ -94,6 +116,24 @@ object BackupRestore {
         /** Null when the backup has no markers table (the desktop then clears its markers). */
         var markers: SqlTable? = null
         val counters = HashMap<String, Long>()
+
+        /** Login subscription groups left out of the restore; their servers never come from a file. */
+        var managedGroupsSkipped = 0
+    }
+
+    /**
+     * The backup's login subscription groups. They are never restored: their encrypted address belongs to the device
+     * that signed in, and their servers are downloaded from the server rather than taken from a backup.
+     */
+    private fun managedGroupsOf(bak: SQLiteDatabase): Set<Long> {
+        if (!bak.hasTable(GROUPS)) return emptySet()
+        val columns = bak.tableColumns(GROUPS).map { it.name }
+        if ("id" !in columns || "url" !in columns) return emptySet()
+        val ids = HashSet<Long>()
+        bak.rawQuery("SELECT `id` FROM `$GROUPS` WHERE `url` LIKE ?", arrayOf(BanShanCrypto.PREFIX + "%")).use { c ->
+            while (c.moveToNext()) ids.add(c.getLong(0))
+        }
+        return ids
     }
 
     private fun stage(file: File, choice: Choice, warnings: MutableList<String>): Staged {
@@ -110,8 +150,10 @@ object BackupRestore {
             bak.disableWriteAheadLogging()
             val main = SagerDatabase.instance.openHelper.writableDatabase
             val staged = Staged()
-            if (choice.profiles) stageProfiles(bak, main, staged, warnings)
-            if (choice.routes) stageRoutes(bak, main, staged, warnings)
+            val managedGroupIds = managedGroupsOf(bak)
+            staged.managedGroupsSkipped = managedGroupIds.size
+            if (choice.profiles) stageProfiles(bak, main, staged, warnings, managedGroupIds)
+            if (choice.routes) stageRoutes(bak, main, staged, warnings, managedGroupIds)
             if (choice.settings) stageSettings(bak, main, staged, warnings)
             if ((choice.profiles || choice.routes) && bak.hasTable(ENTITY_IDS)) {
                 val columns = bak.tableColumns(ENTITY_IDS).mapTo(HashSet()) { it.name }
@@ -179,11 +221,18 @@ object BackupRestore {
      * `groups_order` becomes `display_order` and each group's `profiles_json` position becomes `user_order` (dense per
      * group). What the desktop tolerates but Android's foreign key does not is repaired with a warning.
      */
-    private fun stageProfiles(bak: SQLiteDatabase, main: SupportSQLiteDatabase, staged: Staged, warnings: MutableList<String>) {
+    private fun stageProfiles(
+        bak: SQLiteDatabase,
+        main: SupportSQLiteDatabase,
+        staged: Staged,
+        warnings: MutableList<String>,
+        managedGroupIds: Set<Long>,
+    ) {
         require(bak, GROUPS)
         require(bak, PROFILES)
         val groups = stageTable(bak, main, GROUPS, "`id`", warnings, extra = listOf("display_order"))
         val groupId = groups.index("id")
+        if (managedGroupIds.isNotEmpty()) groups.rows.removeAll { (it[groupId] as? Long) in managedGroupIds }
         val groupIds = groups.rows.mapTo(LinkedHashSet()) { it[groupId] as Long }
 
         val tabs = LinkedHashMap<Long, Long>()
@@ -222,6 +271,8 @@ object BackupRestore {
         val profiles = stageTable(bak, main, PROFILES, "`id`", warnings, extra = listOf("user_order"))
         val profileId = profiles.index("id")
         val gid = profiles.index("gid")
+        // A server of the login subscription is dropped here, before orphan profiles are moved into some other group.
+        if (managedGroupIds.isNotEmpty()) profiles.rows.removeAll { (it[gid] as? Long) in managedGroupIds }
         var moved = 0
         var dropped = 0
         profiles.rows.removeAll { row ->
@@ -260,9 +311,20 @@ object BackupRestore {
         staged.profiles = profiles
     }
 
-    private fun stageRoutes(bak: SQLiteDatabase, main: SupportSQLiteDatabase, staged: Staged, warnings: MutableList<String>) {
+    private fun stageRoutes(
+        bak: SQLiteDatabase,
+        main: SupportSQLiteDatabase,
+        staged: Staged,
+        warnings: MutableList<String>,
+        managedGroupIds: Set<Long>,
+    ) {
         require(bak, ROUTE_PROFILES)
         val profiles = stageTable(bak, main, ROUTE_PROFILES, "`id`", warnings)
+        if (managedGroupIds.isNotEmpty()) {
+            // A routing profile the login subscription provided goes with it.
+            val source = profiles.index("source_gid")
+            if (source >= 0) profiles.rows.removeAll { (it[source] as? Long) in managedGroupIds }
+        }
         val ids = profiles.index("id").let { i -> profiles.rows.mapTo(HashSet()) { it[i] as Long } }
         val rules = if (bak.hasTable(ROUTE_RULES)) {
             stageTable(bak, main, ROUTE_RULES, "`route_profile_id`, `rule_order`", warnings)
@@ -368,6 +430,17 @@ object BackupRestore {
                 db.execSQL("UPDATE `$GROUPS` SET `route_id` = -1")
                 db.execSQL("UPDATE `$ROUTE_PROFILES` SET `source_gid` = -1")
             }
+            if (choice.profiles && choice.routes) {
+                // The login subscription's routing profile is filtered out, so a remaining group may point at nothing.
+                db.execSQL(
+                    "UPDATE `$GROUPS` SET `route_id` = -1 WHERE `route_id` > 0 " +
+                        "AND `route_id` NOT IN (SELECT `id` FROM `$ROUTE_PROFILES`)"
+                )
+                db.execSQL(
+                    "UPDATE `$ROUTE_PROFILES` SET `source_gid` = -1 WHERE `source_gid` > 0 " +
+                        "AND `source_gid` NOT IN (SELECT `id` FROM `$GROUPS`)"
+                )
+            }
             if (choice.profiles || choice.routes) {
                 // Database.cpp:364-377 raises all three counters whichever of the two parts was restored.
                 for ((table, value) in staged.counters) raiseSequence(db, table, value)
@@ -375,6 +448,14 @@ object BackupRestore {
             if (choice.settings) applySettings(db, staged, fromAndroid)
             // Configs.cpp:32-44 initDB: an empty table gets its Default row, with a fresh id.
             if (choice.profiles) SagerDatabase.groupDao.insertDefaultIfEmpty(SagerDatabase.defaultGroupName())
+            if (choice.profiles && (db.longQuery(
+                    "SELECT COUNT(*) FROM `$GROUPS` WHERE `url` LIKE ?",
+                    BanShanCrypto.PREFIX + "%",
+                ) ?: 0L) > 0L
+            ) {
+                // The staging filters them out; a row here means a bug, and the transaction must not commit it.
+                throw RestoreException(app.getString(R.string.backup_error_login_data))
+            }
             if (choice.routes && (db.longQuery("SELECT COUNT(*) FROM `$ROUTE_PROFILES` WHERE `is_raw` = 0") ?: 0L) == 0L) {
                 RouteManager.save(RouteProfile.defaultProfile())
             }
@@ -383,6 +464,44 @@ object BackupRestore {
                 if (c.moveToFirst()) throw RestoreException(app.getString(R.string.backup_error_foreign_key, c.getString(0)))
             }
         }
+    }
+
+    /**
+     * The login subscription is never in a backup. A profiles restore clears the groups table, so the current group is
+     * put back from the address stored on this device; its servers are downloaded again instead of coming from a file.
+     * Returns false when the group could not be stored, which leaves the app signed out.
+     */
+    private fun keepManagedGroup(group: ProxyGroup, wasCurrent: Boolean): Boolean = try {
+        val dao = SagerDatabase.groupDao
+        val restored = group.copy(
+            id = 0L,
+            displayOrder = dao.nextDisplayOrder(),
+            frontProxyId = -1L,
+            landingProxyId = -1L,
+            routeId = -1L,
+            importSubRoute = false,
+            scrollLastProfile = -1,
+            subLastUpdate = 0L,
+            subMetadata = SubUserInfo(),
+            info = "",
+            archive = false,
+        )
+        val groupId = dao.insert(restored)
+        if (groupId <= 0L) {
+            false
+        } else {
+            // The group is what keeps the login: a selection or refresh problem must not report it as lost.
+            if (wasCurrent) {
+                runCatching { GroupRepo.setCurrent(groupId) }
+                    .onFailure { Logs.w("The restored login group could not be made current", it) }
+            }
+            runCatching { SubscriptionClient.refreshGroup(groupId, showDiff = false) }
+                .onFailure { Logs.w("The restored login group could not be refreshed", it) }
+            true
+        }
+    } catch (e: Exception) {
+        Logs.w("The login subscription could not be kept after the restore", e)
+        false
     }
 
     private fun insertRows(db: SupportSQLiteDatabase, table: String, data: SqlTable) {

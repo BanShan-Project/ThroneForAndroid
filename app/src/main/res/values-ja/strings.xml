@@ -964,7 +964,6 @@
     <string name="profiles_test_url">URL テスト</string>
     <string name="profiles_update_subscription">購読を更新</string>
     <string name="project_website">プロジェクトサイト</string>
-    <string name="support_throne">Throne を支援</string>
     <string name="quic_idle_timeout">アイドルタイムアウト</string>
     <string name="quic_initial_packet_size">初期パケットサイズ</string>
     <string name="quic_keep_alive_period">キープアライブ間隔</string>
