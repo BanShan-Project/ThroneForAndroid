@@ -23,6 +23,14 @@
             android:title="@string/settings" />
     </group>
 
+    <!-- Not checkable: it opens the login screen and leaves the current page selected. -->
+    <group android:id="@+id/account">
+        <item
+            android:id="@+id/nav_account"
+            android:icon="@drawable/ic_baseline_person_24"
+            android:title="@string/banshan_account" />
+    </group>
+
     <group
         android:id="@+id/misc"
         android:checkableBehavior="single">

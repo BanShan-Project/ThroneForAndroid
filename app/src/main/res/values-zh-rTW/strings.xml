@@ -1382,7 +1382,7 @@
     <string name="update_checking">正在檢查更新…</string>
     <string name="update_current_version">當前版本：%s</string>
     <string name="update_downloading">正在下載更新</string>
-    <string name="update_downloading_x">正在下載 Throne %s</string>
+    <string name="update_downloading_x">正在下載 半山代理 %s</string>
     <string name="update_error_package">下載的不是此應用的更新。</string>
     <string name="update_error_parse">下載的不是有效 APK。</string>
     <string name="update_error_pin">下載未使用 Throne 釋出金鑰簽名。</string>
@@ -1409,7 +1409,7 @@
     <string name="update_reason_no_manifest">該釋出沒有更新清單</string>
     <string name="update_restart_note">替換應用期間連線會中斷，更新完成後自動恢復。</string>
     <string name="update_size">大小：%s</string>
-    <string name="update_up_to_date">Throne 已是最新版本</string>
+    <string name="update_up_to_date">半山代理已是最新版本</string>
     <string name="update_verifying">正在校驗更新…</string>
     <string name="use_dns_object">使用自定義 DNS 物件</string>
     <string name="use_dns_object_sum">用下方物件替換整個 DNS 部分</string>
@@ -2420,4 +2420,28 @@
     <string name="validation_route_dns_dropped">此路由配置自己的 DNS 設定已被捨棄，因此改用全域性設定：%1$s</string>
     <string name="route_dns_global_servers">遠端 %1$s，直連 %2$s</string>
     <string name="dns_server_suggestions">最近使用和建議的伺服器</string>
+    <string name="banshan_login_title">半山代理</string>
+    <string name="banshan_login_subtitle">使用您的帳號登入並取得節點</string>
+    <string name="banshan_login_username">帳號</string>
+    <string name="banshan_login_password">密碼</string>
+    <string name="banshan_login_action">登入</string>
+    <string name="banshan_login_signing_in">正在登入…</string>
+    <string name="banshan_login_downloading">正在取得節點…</string>
+    <string name="banshan_login_empty">請輸入帳號和密碼</string>
+    <string name="banshan_login_failed">登入失敗，請稍後再試</string>
+    <string name="banshan_login_network">無法連線登入伺服器，請檢查網路後再試</string>
+    <string name="banshan_login_rejected">帳號或密碼錯誤，請重新輸入</string>
+    <string name="banshan_login_bad_response">登入伺服器回傳資料異常，請稍後再試</string>
+    <string name="banshan_login_bad_url">登入伺服器回傳的訂閱位址無效</string>
+    <string name="banshan_login_download_failed">登入成功，但節點取得失敗，請檢查網路後再試</string>
+    <string name="banshan_login_success">登入成功，已匯入 %1$d 個節點</string>
+    <string name="banshan_login_http_error">登入伺服器暫時無法使用（HTTP %1$d），請稍後再試</string>
+    <string name="banshan_group_name">半山專線</string>
+    <string name="banshan_protected_action">此分組由登入帳號管理，無法修改</string>
+    <string name="banshan_protected_profiles">登入帳號的節點受保護，無法修改、刪除或分享</string>
+    <string name="banshan_account">帳號</string>
+    <string name="banshan_account_current">目前帳號：%1$s</string>
+    <string name="banshan_account_unknown">已登入</string>
+    <string name="banshan_login_subtitle_relogin">登入新帳號後，舊帳號的節點會被刪除並替換。</string>
+    <string name="banshan_login_no_nodes">該帳號沒有可用節點</string>
 </resources>

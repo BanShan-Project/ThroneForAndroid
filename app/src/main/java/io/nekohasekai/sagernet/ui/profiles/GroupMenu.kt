@@ -5,6 +5,7 @@ import android.view.MenuItem
 import android.view.View
 import androidx.core.view.MenuCompat
 import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.bg.test.TestSpec
 import io.nekohasekai.sagernet.database.GroupSortMethod
 import io.nekohasekai.sagernet.database.ProxyGroup
@@ -12,11 +13,25 @@ import io.nekohasekai.sagernet.database.TestBy
 import io.nekohasekai.sagernet.database.TestShowItems
 import io.nekohasekai.sagernet.database.TrafficBy
 import io.nekohasekai.sagernet.database.TypeBy
+import io.nekohasekai.sagernet.ktx.snackbar
 import io.nekohasekai.sagernet.ui.ConfigurationFragment
 import io.nekohasekai.sagernet.ui.test.TestSessionClient
 
 /** The ⋮ menu of the profiles screen: actions on the current tab's group (the desktop's Groups menu). */
 class GroupMenu(private val host: ConfigurationFragment) {
+
+    /** Group actions that rewrite the profiles or the group row; a login-managed group refuses them. */
+    private val managedActions = setOf(
+        R.id.action_resolve_domains,
+        R.id.action_remove_duplicates, R.id.action_remove_unavailable,
+        R.id.action_remove_invalid, R.id.action_remove_insecure,
+        R.id.action_sort_ascending, R.id.action_sort_descending,
+        R.id.action_sort_manual, R.id.action_sort_type, R.id.action_sort_security,
+        R.id.action_sort_address, R.id.action_sort_name, R.id.action_sort_test_result,
+        R.id.action_sort_test_latency, R.id.action_sort_test_download, R.id.action_sort_test_upload,
+        R.id.action_sort_test_ip_out, R.id.action_sort_traffic, R.id.action_sort_traffic_total,
+        R.id.action_sort_traffic_downloaded, R.id.action_sort_traffic_uploaded,
+    )
 
     /** Direction of the next sort; a group that keeps a sort shows its own direction. */
     var sortDescending = false
@@ -49,9 +64,13 @@ class GroupMenu(private val host: ConfigurationFragment) {
 
     /** Like a click on the sorted column's header: a kept sort turns around at once. */
     private fun setDirection(item: MenuItem, descending: Boolean) {
+        val group = host.currentGroup() ?: return
+        if (BanShanSession.isManagedGroup(group.id)) {
+            host.snackbar(R.string.banshan_protected_action).show()
+            return
+        }
         sortDescending = descending
         item.isChecked = true
-        val group = host.currentGroup() ?: return
         if (group.keepsSorted()) GroupActions.sort(host, group.id, group.sort.method, descending)
     }
 
@@ -83,6 +102,11 @@ class GroupMenu(private val host: ConfigurationFragment) {
         val group = host.currentGroup()
         menu.findItem(R.id.action_update_subscription)?.isVisible = group?.isSubscription == true
         menu.findItem(R.id.action_test_stop)?.isVisible = host.testState.running
+        // The login subscription's group is managed by its account: no sorting, cleanup or resolving.
+        val managed = group != null && BanShanSession.isManagedGroup(group.id)
+        menu.findItem(R.id.action_sort)?.isVisible = !managed
+        menu.findItem(R.id.action_remove)?.isVisible = !managed
+        menu.findItem(R.id.action_resolve_domains)?.isVisible = !managed
         if (group != null && group.keepsSorted()) sortDescending = group.sort.descending
         menu.findItem(if (sortDescending) R.id.action_sort_descending else R.id.action_sort_ascending)?.isChecked = true
         if (group != null) {
@@ -119,6 +143,10 @@ class GroupMenu(private val host: ConfigurationFragment) {
 
     private fun onGroupItemClick(item: MenuItem, group: ProxyGroup): Boolean {
         val id = group.id
+        if (item.itemId in managedActions && BanShanSession.isManagedGroup(id)) {
+            host.snackbar(R.string.banshan_protected_action).show()
+            return true
+        }
         when (item.itemId) {
             R.id.action_update_subscription -> GroupActions.updateSubscription(group)
             R.id.action_test_url -> ProfileTests.startGroup(host, TestSpec.KIND_URL, id)

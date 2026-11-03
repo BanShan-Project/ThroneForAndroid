@@ -17,6 +17,7 @@ import androidx.preference.PreferenceDataStore
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.ProxyEntity
 import io.nekohasekai.sagernet.database.SettingsRegistry
@@ -359,10 +360,12 @@ internal class ProfileRowHolder(view: View, private val adapter: ProfileListAdap
         val id = boundProfile?.id ?: return
         val selecting = host.selection.active
         val buttons = !host.select && !selecting
+        // A login-managed server has nothing to edit or share: the row buttons would only open a refusal.
+        val managed = BanShanSession.isManagedUrl(adapter.group?.url)
         selectCheck.isVisible = selecting
         selectCheck.isChecked = selecting && host.selection.isChecked(id)
-        editButton.isVisible = buttons && !adapter.isCompact && !adapter.isCompactRow
-        shareButton.isVisible = buttons && !adapter.isCompact && !adapter.isCompactRow
+        editButton.isVisible = buttons && !adapter.isCompact && !adapter.isCompactRow && !managed
+        shareButton.isVisible = buttons && !adapter.isCompact && !adapter.isCompactRow && !managed
         moreButton.isVisible = buttons
         applyCardColors(host.isSelectedProfile(id), selectCheck.isChecked)
     }

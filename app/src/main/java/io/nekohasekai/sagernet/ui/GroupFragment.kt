@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.room.InvalidationTracker
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.GroupRepo
 import io.nekohasekai.sagernet.database.ProfileManager
@@ -142,12 +143,21 @@ class GroupFragment : ToolbarFragment(R.layout.layout_group), Toolbar.OnMenuItem
     }
 
     private fun edit(group: ProxyGroup) {
+        if (refuseManaged(group)) return
         groupEditor.launch(Intent(requireContext(), GroupSettingsActivity::class.java).apply {
             putExtra(GroupSettingsActivity.EXTRA_GROUP_ID, group.id)
         })
     }
 
+    /** The login-managed group is independent: it is not listed here and every action on it is refused. */
+    private fun refuseManaged(group: ProxyGroup): Boolean {
+        if (!BanShanSession.isManagedGroup(group.id)) return false
+        snackbar(R.string.banshan_protected_action).show()
+        return true
+    }
+
     private fun copyLinks(group: ProxyGroup, deepLinks: Boolean) {
+        if (refuseManaged(group)) return
         runOnDefaultDispatcher {
             val links = StringBuilder()
             for (profile in ProfileManager.members(group.id)) {
@@ -174,12 +184,14 @@ class GroupFragment : ToolbarFragment(R.layout.layout_group), Toolbar.OnMenuItem
         if (deepLinks) profile.exportJsonLink() else profile.exportLink().ifEmpty { profile.exportJsonLink() }
 
     private fun exportToFile(group: ProxyGroup, deepLinks: Boolean) {
+        if (refuseManaged(group)) return
         exportGroup = group
         exportDeepLinks = deepLinks
         startFilesForResult(exportProfiles, "profiles_${group.displayName()}.txt")
     }
 
     private fun confirmClear(group: ProxyGroup) {
+        if (refuseManaged(group)) return
         requireContext().confirmAction(
             getString(R.string.confirm_clear_group), group.displayName(), R.string.confirm_clear,
         ) {
@@ -194,6 +206,7 @@ class GroupFragment : ToolbarFragment(R.layout.layout_group), Toolbar.OnMenuItem
 
     /** GroupItem::on_remove_clicked: never the last group; a running profile of the group is stopped first. */
     private fun confirmRemove(group: ProxyGroup) {
+        if (refuseManaged(group)) return
         val remove = { runOnDefaultDispatcher { if (GroupRepo.delete(group.id)) SubscriptionScheduler.schedule() } }
         if (DataStore.skipDeleteConfirmation) {
             remove()
@@ -234,6 +247,8 @@ class GroupFragment : ToolbarFragment(R.layout.layout_group), Toolbar.OnMenuItem
         val rows = ArrayList<Row>()
         var states: Map<Long, Int> = emptyMap()
         var dragging = false
+        /** Every group in the database, the hidden login one included: the "last group" rule counts it. */
+        var totalGroups = 0
         private var moved = false
         private var reloadAfterDrag = false
 
@@ -242,8 +257,14 @@ class GroupFragment : ToolbarFragment(R.layout.layout_group), Toolbar.OnMenuItem
         }
 
         suspend fun reload() {
+            val all = withContext(Dispatchers.IO) {
+                // The login subscription is managed by its account, not by this screen.
+                GroupRepo.all()
+            }
+            totalGroups = all.size
             val fresh = withContext(Dispatchers.IO) {
-                GroupRepo.all().map { Row(it, SagerDatabase.proxyDao.countByGroup(it.id)) }
+                all.filterNot { BanShanSession.isManagedUrl(it.url) }
+                    .map { Row(it, SagerDatabase.proxyDao.countByGroup(it.id)) }
             }
             if (dragging) {
                 reloadAfterDrag = true
@@ -363,7 +384,7 @@ class GroupFragment : ToolbarFragment(R.layout.layout_group), Toolbar.OnMenuItem
                 // TV only, where a D-pad cannot drag
                 menu.findItem(R.id.action_move_up).isVisible = SagerNet.isTv && index > 0
                 menu.findItem(R.id.action_move_down).isVisible = SagerNet.isTv && index in 0 until groupAdapter.rows.size - 1
-                menu.findItem(R.id.action_remove).isVisible = groupAdapter.rows.size > 1
+                menu.findItem(R.id.action_remove).isVisible = groupAdapter.totalGroups > 1
                 popup.setOnMenuItemClickListener(this)
                 popup.show()
             }

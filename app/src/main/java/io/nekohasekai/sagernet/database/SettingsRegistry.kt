@@ -379,6 +379,7 @@ object SettingsRegistry {
         Key.UPDATE_CHECK_AUTO, Key.UPDATE_SKIPPED_VERSION_CODE, Key.RESUME_AFTER_UPDATE, Key.BATTERY_PROMPT_SHOWN,
         Key.LOG_EXPORT_REDACT, Key.HWID_FALLBACK, Key.WIFI_PERMISSION_ASKED, Key.SERVICE_ERROR,
         Key.SERVICE_ERROR_DNS, Key.SERVICE_ERROR_GEO, Key.SERVICE_ERROR_RULE_SETS, Key.START_WITHOUT_RULE_SETS,
+        Key.BANSHAN_LOGGED_IN, Key.BANSHAN_USERNAME,
     )
 
     /**
@@ -392,6 +393,8 @@ object SettingsRegistry {
         Key.WIFI_PERMISSION_ASKED, Key.SERVICE_ERROR, Key.SERVICE_ERROR_DNS, Key.SERVICE_ERROR_GEO,
         Key.SERVICE_ERROR_RULE_SETS, Key.START_WITHOUT_RULE_SETS, Key.RUNNING_PROFILES, Key.RUNNING_ROUTE,
         CORE_BOX_API_PORT.key,
+        // The BanShan login belongs to this device: a backup restored elsewhere must sign in again.
+        Key.BANSHAN_LOGGED_IN, Key.BANSHAN_USERNAME,
     )
 
     // ------------------------------------------------------------------------------------------------ lookup

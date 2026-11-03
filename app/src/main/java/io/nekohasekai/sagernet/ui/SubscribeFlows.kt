@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.database.GroupRepo
 import io.nekohasekai.sagernet.databinding.LayoutRouteRemotePromptBinding
 import io.nekohasekai.sagernet.databinding.LayoutSubscribeChoiceBinding
@@ -174,6 +175,7 @@ object SubscribeFlows {
             .show()
         binding.addProfiles.setOnClickListener {
             dialog.dismiss()
+            if (refuseManaged(activity, gid)) return@setOnClickListener
             runOnDefaultDispatcher { SubscriptionClient.importUrl(url, gid) }
         }
         binding.newGroup.setOnClickListener {
@@ -182,6 +184,7 @@ object SubscribeFlows {
         }
         binding.httpProxy.setOnClickListener {
             dialog.dismiss()
+            if (refuseManaged(activity, gid)) return@setOnClickListener
             importInto(activity, url, gid)
         }
     }
@@ -204,6 +207,7 @@ object SubscribeFlows {
 
     /** ImportText into the group, then "Imported N profile(s)" unless MainActivity's report popup already said so. */
     private fun importInto(activity: FragmentActivity, content: String, gid: Long) {
+        if (refuseManaged(activity, gid)) return
         runOnDefaultDispatcher {
             val message = try {
                 val result = SubscriptionClient.importText(content, gid)
@@ -215,6 +219,14 @@ object SubscribeFlows {
             }
             onMainDispatcher { notify(activity, message) }
         }
+    }
+
+    /** A login-managed group's profiles belong to the account: no import may join them. */
+    private fun refuseManaged(activity: FragmentActivity, gid: Long): Boolean {
+        val target = if (gid > 0) gid else GroupRepo.currentId()
+        if (!BanShanSession.isManagedGroup(target)) return false
+        notify(activity, activity.getString(R.string.banshan_protected_action))
+        return true
     }
 
     private fun notify(activity: FragmentActivity, text: CharSequence) {

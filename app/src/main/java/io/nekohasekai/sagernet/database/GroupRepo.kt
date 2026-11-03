@@ -1,6 +1,7 @@
 package io.nekohasekai.sagernet.database
 
 import io.nekohasekai.sagernet.SagerNet
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.ktx.Logs
 import java.util.concurrent.Callable
 import java.util.concurrent.CopyOnWriteArrayList
@@ -110,6 +111,8 @@ object GroupRepo {
      * profile of the group is stopped first. The members go by the foreign key cascade.
      */
     suspend fun delete(id: Long): Boolean {
+        // The login subscription's group belongs to its account, not to this screen or any caller.
+        if (BanShanSession.isManagedGroup(id)) return false
         val remaining = SagerDatabase.instance.runInTransaction(Callable {
             val ids = dao.allIds()
             if (id !in ids || ids.size <= 1) return@Callable null

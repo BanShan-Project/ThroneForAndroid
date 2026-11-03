@@ -5,6 +5,7 @@ import androidx.annotation.StringRes
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.bg.test.TestSpec
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.GroupRepo
@@ -20,6 +21,14 @@ import io.nekohasekai.sagernet.ui.ConfigurationFragment
  * turns into its contextual actions. Switching tabs, Back or the close icon end it.
  */
 class SelectionMode(private val host: ConfigurationFragment) {
+
+    /** The actions that change or copy the checked profiles; a login-managed group refuses them. */
+    private val managedActions = setOf(
+        R.id.action_selection_delete,
+        R.id.action_selection_move,
+        R.id.action_selection_copy_links,
+        R.id.action_selection_copy_throne,
+    )
 
     private val checked = LinkedHashSet<Long>()
 
@@ -92,6 +101,10 @@ class SelectionMode(private val host: ConfigurationFragment) {
     fun onMenuItemClick(item: MenuItem): Boolean {
         if (!active) return false
         val ids = ids()
+        if (item.itemId in managedActions && BanShanSession.isManagedGroup(groupId)) {
+            host.snackbar(R.string.banshan_protected_profiles).show()
+            return true
+        }
         when (item.itemId) {
             R.id.action_selection_test_url -> test(TestSpec.KIND_URL, ids)
             R.id.action_selection_test_ip -> test(TestSpec.KIND_IP, ids)
@@ -107,6 +120,13 @@ class SelectionMode(private val host: ConfigurationFragment) {
         return true
     }
 
+    /** The checked profiles of a login-managed group are protected; the caller stops with a hint. */
+    private fun refuseManaged(): Boolean {
+        if (!BanShanSession.isManagedGroup(groupId)) return false
+        host.snackbar(R.string.banshan_protected_profiles).show()
+        return true
+    }
+
     private fun test(kind: Int, ids: List<Long>) {
         ProfileTests.startProfiles(host, kind, ids, groupId)
         finish()
@@ -115,6 +135,7 @@ class SelectionMode(private val host: ConfigurationFragment) {
     /** on_menu_delete_triggered: asks unless skip_delete_confirmation; the running profile is stopped. */
     private fun delete(ids: List<Long>) {
         if (ids.isEmpty()) return
+        if (refuseManaged()) return
         val run = {
             finish()
             GroupActions.deleteProfiles(host, ids, stopRunning = true)
@@ -154,6 +175,7 @@ class SelectionMode(private val host: ConfigurationFragment) {
 
     /** Android extra: to the end of another basic group (as the profile editor's "Move"). */
     private fun moveToGroup(ids: List<Long>) {
+        if (refuseManaged()) return
         val targets = host.groups().filter { !it.isSubscription && it.id != groupId }
         if (targets.isEmpty()) {
             host.snackbar(R.string.profiles_move_no_target).show()
@@ -179,6 +201,7 @@ class SelectionMode(private val host: ConfigurationFragment) {
 
     /** on_menu_copy_links (share link, the Throne link when there is none) / on_menu_copy_links_nkr. */
     private fun copyLinks(ids: List<Long>, throne: Boolean) {
+        if (refuseManaged()) return
         finish()
         host.launchIo {
             val position = ids.withIndex().associate { it.value to it.index }

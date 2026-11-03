@@ -6,6 +6,7 @@ import io.nekohasekai.sagernet.ui.SaveDocument
 import androidx.appcompat.widget.PopupMenu
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.bg.test.TestSpec
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.GroupRepo
@@ -53,20 +54,29 @@ class ProfileItemMenu(private val host: ConfigurationFragment) {
 
     fun edit(profile: ProxyEntity, group: ProxyGroup?) {
         val context = host.context ?: return
+        if (refuseManaged(profile)) return
         editor.launch(profile.profileSettingsIntent(context, group?.isSubscription == true))
+    }
+
+    /** The servers of a login-managed group belong to the account: no editing, moving, deleting or sharing. */
+    private fun refuseManaged(profile: ProxyEntity): Boolean {
+        if (!BanShanSession.isManagedProfile(profile)) return false
+        host.snackbar(R.string.banshan_protected_profiles).show()
+        return true
     }
 
     internal fun showMenu(anchor: View, profile: ProxyEntity, adapter: ProfileListAdapter) {
         val popup = PopupMenu(anchor.context, anchor)
         popup.menuInflater.inflate(R.menu.double_column_item_menu, popup.menu)
         val menu = popup.menu
+        val managed = BanShanSession.isManagedProfile(profile)
         // the compact card and the compact row have no edit / share buttons
         val noButtons = adapter.isCompact || adapter.isCompactRow
-        menu.findItem(R.id.action_edit).isVisible = noButtons
-        menu.findItem(R.id.action_share).isVisible = noButtons
+        menu.findItem(R.id.action_edit).isVisible = noButtons && !managed
+        menu.findItem(R.id.action_share).isVisible = noButtons && !managed
         // TV only, where a D-pad cannot drag; a filtered list says nothing about the stored order
         val index = adapter.memberIds.indexOf(profile.id)
-        val movable = SagerNet.isTv && !adapter.isFiltered && index >= 0
+        val movable = SagerNet.isTv && !adapter.isFiltered && index >= 0 && !managed
         menu.findItem(R.id.action_move_up).apply {
             isVisible = movable
             isEnabled = index > 0
@@ -75,10 +85,13 @@ class ProfileItemMenu(private val host: ConfigurationFragment) {
             isVisible = movable
             isEnabled = index in 0 until adapter.memberIds.size - 1
         }
-        menu.findItem(R.id.action_delete).isEnabled = !host.isStartedProfile(profile.id)
+        menu.findItem(R.id.action_delete).apply {
+            isVisible = !managed
+            isEnabled = !host.isStartedProfile(profile.id)
+        }
         val address = profile.outbound.getAddress()
         menu.findItem(R.id.action_resolve_domain).isVisible =
-            !profile.outbound.invalid && address.isNotEmpty() && !address.isIpAddress()
+            !managed && !profile.outbound.invalid && address.isNotEmpty() && !address.isIpAddress()
         menu.findItem(R.id.action_clear_test_results).isVisible = profile.hasTestResults()
         menu.findItem(R.id.action_clear_traffic_statistics).isVisible = profile.tx != 0L || profile.rx != 0L
         popup.setOnMenuItemClickListener { item ->
@@ -137,6 +150,7 @@ class ProfileItemMenu(private val host: ConfigurationFragment) {
 
     /** One step in the stored order through Group::EmplaceProfile (the D-pad alternative to dragging). */
     private fun move(profile: ProxyEntity, step: Int) {
+        if (refuseManaged(profile)) return
         val groupId = profile.groupId
         host.launchIo {
             val ids = ProfileManager.memberIds(groupId)
@@ -149,6 +163,7 @@ class ProfileItemMenu(private val host: ConfigurationFragment) {
     }
 
     private fun delete(profile: ProxyEntity, adapter: ProfileListAdapter) {
+        if (refuseManaged(profile)) return
         if (DataStore.skipDeleteConfirmation) {
             adapter.removeWithUndo(profile)
             return
@@ -163,6 +178,7 @@ class ProfileItemMenu(private val host: ConfigurationFragment) {
 
     fun showShare(anchor: View, profile: ProxyEntity) {
         if (host.select) return
+        if (refuseManaged(profile)) return
         val popup = PopupMenu(anchor.context, anchor)
         popup.menuInflater.inflate(R.menu.profile_share_menu, popup.menu)
         // a chain has no link of its own, only the config it starts (bf89f273)
@@ -198,6 +214,7 @@ class ProfileItemMenu(private val host: ConfigurationFragment) {
      * to the file the user picks. A text too large for the clipboard offers the file instead.
      */
     private fun exportConfiguration(profile: ProxyEntity, toFile: Boolean) {
+        if (refuseManaged(profile)) return
         // A copy parses its own outbound, so the row's cached one is only ever touched on the main thread.
         val entity = profile.copy()
         host.launchIo {

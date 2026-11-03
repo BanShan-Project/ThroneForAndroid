@@ -358,6 +358,15 @@
             android:configChanges="uiMode"
             android:theme="@style/Theme.SagerNet" />
 
+        <activity
+            android:name="io.nekohasekai.sagernet.ui.LoginActivity"
+            android:configChanges="uiMode|orientation|screenSize|screenLayout|keyboardHidden"
+            android:exported="false"
+            android:label="@string/banshan_login_title"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.SagerNet"
+            android:windowSoftInputMode="adjustResize" />
+
         <service
             android:name="io.nekohasekai.sagernet.bg.ProxyService"
             android:exported="false"

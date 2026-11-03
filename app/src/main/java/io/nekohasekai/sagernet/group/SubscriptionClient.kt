@@ -2,6 +2,7 @@ package io.nekohasekai.sagernet.group
 
 import io.nekohasekai.sagernet.aidl.ICoreService
 import io.nekohasekai.sagernet.aidl.ISubscriptionCallback
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.bg.CoreServiceClient
 import io.nekohasekai.sagernet.database.GroupRepo
 import io.nekohasekai.sagernet.ktx.Logs
@@ -119,7 +120,12 @@ object SubscriptionClient {
     }
 
     /** ImportUrl: one fetch with the global identity into group [gid] (the current group when not positive). */
-    fun importUrl(url: String, gid: Long) = launchCall(gid) { it.importUrl(url, gid) }
+    fun importUrl(url: String, gid: Long) {
+        val target = if (gid > 0) gid else GroupRepo.currentId()
+        // A login-managed group takes no imported profiles.
+        if (BanShanSession.isManagedGroup(target)) return
+        launchCall(gid) { it.importUrl(url, gid) }
+    }
 
     /** What [importText] stored, and whether the import box (a popup report) already said so. */
     class TextImport(val count: Int, val reported: Boolean)
@@ -131,6 +137,8 @@ object SubscriptionClient {
     suspend fun importText(text: String, gid: Long = -1L): TextImport = withContext(Dispatchers.IO) {
         if (text.isBlank()) return@withContext TextImport(0, false)
         val target = if (gid > 0) gid else GroupRepo.currentId()
+        // A login-managed group takes no imported profiles.
+        if (BanShanSession.isManagedGroup(target)) return@withContext TextImport(0, false)
         val dir = File(app.cacheDir, SubscriptionQueue.IMPORT_DIR)
         val file = File(dir, UUID.randomUUID().toString() + ".txt")
         val countFile = File(file.path + SubscriptionQueue.IMPORT_COUNT_SUFFIX)

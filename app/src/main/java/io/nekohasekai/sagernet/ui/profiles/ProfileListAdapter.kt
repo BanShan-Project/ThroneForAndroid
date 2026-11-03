@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.aidl.TrafficData
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.bg.BaseService
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.GroupRepo
@@ -652,6 +653,8 @@ internal class ProfileListAdapter(private val fragment: ProfileListFragment) :
     /** Drag and drop follows the desktop: refused while the list is filtered (and while selecting or picking). */
     fun canDrag(): Boolean {
         val host = host ?: return false
+        // The order of a login-managed group belongs to its account; dragging would also store a manual sort.
+        if (BanShanSession.isManagedGroup(groupId)) return false
         if (host.select || isFiltered || !loaded) return false
         if (!dragging && host.selection.active) return false
         return DataStore.serviceState.let { it.canStop || it == BaseService.State.Stopped }
@@ -697,6 +700,7 @@ internal class ProfileListAdapter(private val fragment: ProfileListFragment) :
 
     /** The single-profile delete: hidden now, deleted when the undo snackbar goes away. */
     fun removeWithUndo(profile: ProxyEntity) {
+        if (BanShanSession.isManagedProfile(profile)) return
         val manager = fragment.undoManager ?: return
         val index = positionOf(profile.id)
         if (index < 0) return

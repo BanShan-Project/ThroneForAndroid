@@ -3,6 +3,7 @@ package io.nekohasekai.sagernet.group
 import android.os.SystemClock
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.bg.BaseService
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.GroupRepo
@@ -72,8 +73,15 @@ internal object SubscriptionRefresh {
         if (group.archive) return
         val options = group.subOptions
         val url = group.url.trim()
+        // A login-managed group stores its address encrypted; the fetcher gets the plain one.
+        val fetchUrl = BanShanSession.subscriptionUrl(url)
+        if (fetchUrl.isEmpty()) {
+            Logs.w("${group.name}: the subscription address cannot be read")
+            if (notifyErrors) SubscriptionQueue.error(gid, str(R.string.banshan_login_download_failed))
+            return
+        }
 
-        val (info, result, routing) = fetchAndParse(group, url, surface, notifyErrors) ?: return
+        val (info, result, routing) = fetchAndParse(group, url, fetchUrl, surface, notifyErrors) ?: return
         val parsed = result.outbounds
         // Android-only (#53): filtered servers never enter the sink, so the diff deletes the ones already stored.
         val servers = SubscriptionNameFilter.apply(parsed, options, group.name)
@@ -222,11 +230,12 @@ internal object SubscriptionRefresh {
     private suspend fun fetchAndParse(
         group: ProxyGroup,
         url: String,
+        fetchUrl: String,
         surface: Surface,
         notifyErrors: Boolean,
     ): Triple<SubUserInfo, ProfileImport.Result, String>? {
         val gid = group.id
-        val fetched = SubscriptionFetch.fetch(url, group.name, RequestIdentity.resolve(group))
+        val fetched = SubscriptionFetch.fetch(fetchUrl, group.name, RequestIdentity.resolve(group))
         if (fetched.error != null) {
             if (surface == Surface.Report) {
                 // The group is stored before the download: a failed one is fixed through its own TLS, HTTP and User Agent settings.

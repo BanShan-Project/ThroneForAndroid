@@ -29,6 +29,7 @@ import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.QuickToggleShortcut
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.SagerDatabase
@@ -128,6 +129,17 @@ abstract class ProfileSettingsActivity<T : Outbound>(
         if (savedInstanceState == null) {
             val editingId = intent.getLongExtra(EXTRA_PROFILE_ID, 0L)
             isSubscription = intent.getBooleanExtra(EXTRA_IS_SUBSCRIPTION, false)
+            // A login-managed group's servers cannot be edited, and no new profile may join that group.
+            val targetGroup = if (editingId > 0) {
+                ProfileManager.getProfile(editingId)?.groupId
+            } else {
+                DataStore.currentGroupId()
+            }
+            if (BanShanSession.isManagedGroup(targetGroup ?: 0L)) {
+                Toast.makeText(this, R.string.banshan_protected_profiles, Toast.LENGTH_LONG).show()
+                finish()
+                return
+            }
             DataStore.editingId = editingId
             runOnDefaultDispatcher {
                 if (editingId == 0L) {

@@ -22,6 +22,7 @@ import androidx.preference.PreferenceFragmentCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.GroupRepo
 import io.nekohasekai.sagernet.database.ProfileManager
@@ -181,6 +182,12 @@ class GroupSettingsActivity : ThemedActivity(R.layout.layout_config_settings), O
             setHomeAsUpIndicator(R.drawable.ic_navigation_close)
         }
         editingId = intent.getLongExtra(EXTRA_GROUP_ID, 0L)
+        if (editingId > 0 && BanShanSession.isManagedGroup(editingId)) {
+            // The login subscription is managed by its account: no name, address or option may be changed.
+            Toast.makeText(this, R.string.banshan_protected_action, Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
         advancedExpanded = savedInstanceState?.getBoolean(STATE_ADVANCED) ?: false
         onBackPressedDispatcher.addCallback(this) { close() }
 
@@ -252,7 +259,8 @@ class GroupSettingsActivity : ThemedActivity(R.layout.layout_config_settings), O
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         // A new group's delete discards it; the last group cannot be removed.
-        menu.findItem(R.id.action_delete)?.isVisible = loaded && (editingId == 0L || groupCount > 1)
+        val managed = editingId > 0 && BanShanSession.isManagedGroup(editingId)
+        menu.findItem(R.id.action_delete)?.isVisible = !managed && loaded && (editingId == 0L || groupCount > 1)
         return super.onPrepareOptionsMenu(menu)
     }
 
@@ -290,6 +298,10 @@ class GroupSettingsActivity : ThemedActivity(R.layout.layout_config_settings), O
     }
 
     private fun confirmRemove() {
+        if (BanShanSession.isManagedGroup(editingId)) {
+            Toast.makeText(this, R.string.banshan_protected_action, Toast.LENGTH_LONG).show()
+            return
+        }
         val name = ProxyGroup(name = DataStore.groupName.trim()).displayName()
         confirmAction(getString(R.string.confirm_remove_group), name, R.string.delete) {
             lifecycleScope.launch {
@@ -412,6 +424,10 @@ class GroupSettingsActivity : ThemedActivity(R.layout.layout_config_settings), O
 
     /** DialogEditGroup::accept and DialogEditGroupAdvanced::accept behind one save gate. */
     private suspend fun save() {
+        if (editingId > 0 && BanShanSession.isManagedGroup(editingId)) {
+            finish()
+            return
+        }
         if (fragment?.form?.validateAll() == false) return
         val restartNeeded = withContext(Dispatchers.IO) {
             val group = if (editingId > 0) GroupRepo.get(editingId) ?: return@withContext false else ProxyGroup()

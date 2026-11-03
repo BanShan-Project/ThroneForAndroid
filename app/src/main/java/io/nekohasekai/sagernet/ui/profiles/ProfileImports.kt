@@ -10,6 +10,7 @@ import android.view.MenuItem
 import androidx.activity.result.contract.ActivityResultContracts
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.SettingsMapper
 import io.nekohasekai.sagernet.ktx.Logs
@@ -66,6 +67,11 @@ class ProfileImports(private val host: ConfigurationFragment) {
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
 
     fun onMenuItemClick(item: MenuItem): Boolean {
+        // Everything here lands in the current tab's group, which a login-managed group refuses.
+        if (BanShanSession.isManagedGroup(host.currentGroupId)) {
+            host.snackbar(R.string.banshan_protected_action).show()
+            return true
+        }
         when (item.itemId) {
             R.id.action_scan_qr_code -> host.startActivity(Intent(host.requireContext(), ScannerActivity::class.java))
             R.id.action_import_clipboard -> importClipboard()
@@ -91,6 +97,10 @@ class ProfileImports(private val host: ConfigurationFragment) {
     /** importFromFiles for a text file; a zip (Android extra) holds one document per entry (WireGuard / OpenVPN). */
     private fun importFile(uri: Uri) {
         val groupId = host.currentGroupId
+        if (BanShanSession.isManagedGroup(groupId)) {
+            host.snackbar(R.string.banshan_protected_action).show()
+            return
+        }
         val activity = host.requireActivity()
         val resolver = activity.contentResolver
         host.launchIo {

@@ -101,6 +101,11 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var appendHttpProxy by configurationStore.boolean(Key.APPEND_HTTP_PROXY)
     var httpProxyBypass by configurationStore.string(Key.HTTP_PROXY_BYPASS) { "" }
 
+    /** The BanShan login: set once its group and profiles exist; the group row itself is checked too. */
+    var banshanLoggedIn by configurationStore.boolean(Key.BANSHAN_LOGGED_IN)
+    /** The account of that login, prefilled in the login screen. */
+    var banshanUsername by configurationStore.string(Key.BANSHAN_USERNAME)
+
     var webdavServer: String?
         get() = configurationStore.getString(Key.WEBDAV_SERVER)
         set(value) = configurationStore.putString(Key.WEBDAV_SERVER, value)

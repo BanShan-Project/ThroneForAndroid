@@ -77,6 +77,11 @@ object Key {
     const val WEBDAV_PATH = "webdavPath"
     const val DEVICE_ID = "deviceId"
     const val DEVICE_NAME = "deviceName"
+
+    /** A completed BanShan login; the group row is the other half of the state. */
+    const val BANSHAN_LOGGED_IN = "banshanLoggedIn"
+    /** The account of that login, prefilled on the next one. */
+    const val BANSHAN_USERNAME = "banshanUsername"
 }
 
 object Action {

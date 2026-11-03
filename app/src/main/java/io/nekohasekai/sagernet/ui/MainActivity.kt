@@ -32,6 +32,7 @@ import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.aidl.ISagerNetService
 import io.nekohasekai.sagernet.aidl.SpeedDisplayData
 import io.nekohasekai.sagernet.aidl.TrafficDataBatch
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.bg.BaseService
 import io.nekohasekai.sagernet.bg.SagerConnection
 import io.nekohasekai.sagernet.bg.test.TestSpec
@@ -83,6 +84,15 @@ class MainActivity : ThemedActivity(),
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // No subscription exists before the BanShan account is signed in; the login screen is the only way in.
+        if (savedInstanceState == null && !BanShanSession.isLoggedIn()) {
+            startActivity(
+                Intent(this, LoginActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
+            finish()
+            return
+        }
         MessageStore.setCurrentActivity(this)
         val animateInitialControls = savedInstanceState == null
 
@@ -164,6 +174,8 @@ class MainActivity : ThemedActivity(),
 
         if (savedInstanceState == null) intent?.let(::handleImportIntent)
         SubscriptionReportDialog.observe(this)
+        // The login subscription follows the account on the server; the desktop refreshes its hidden one at every start.
+        if (savedInstanceState == null) BanShanSession.refreshIfStale()
 
         refreshNavMenu(DataStore.apiDashboardEnabled)
 
@@ -339,6 +351,14 @@ class MainActivity : ThemedActivity(),
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
+        // The account entry opens the login screen over the app; the page behind stays as it is.
+        if (item.itemId == R.id.nav_account) {
+            binding.drawerLayout.closeDrawers()
+            startActivity(
+                Intent(this, LoginActivity::class.java).putExtra(LoginActivity.EXTRA_RELOGIN, true)
+            )
+            return true
+        }
         if (item.isChecked) binding.drawerLayout.closeDrawers() else {
             return displayFragmentWithId(item.itemId)
         }

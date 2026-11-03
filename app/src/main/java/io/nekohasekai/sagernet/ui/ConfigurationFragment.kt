@@ -46,6 +46,8 @@ import io.nekohasekai.sagernet.ktx.needReload
 import io.nekohasekai.sagernet.ktx.onMainDispatcher
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
 import io.nekohasekai.sagernet.ktx.runOnMainDispatcher
+import io.nekohasekai.sagernet.ktx.snackbar
+import io.nekohasekai.sagernet.banshan.BanShanSession
 import io.nekohasekai.sagernet.ui.profiles.GroupMenu
 import io.nekohasekai.sagernet.ui.profiles.ProfileImports
 import io.nekohasekai.sagernet.ui.profiles.ProfileItemMenu
@@ -466,6 +468,10 @@ class ConfigurationFragment : ToolbarFragment(R.layout.layout_group_list),
 
     /** A tab's long press: the group editor, as the groups screen opens it. */
     private fun editGroup(group: ProxyGroup) {
+        if (BanShanSession.isManagedGroup(group.id)) {
+            snackbar(R.string.banshan_protected_action).show()
+            return
+        }
         groupEditor.launch(Intent(requireContext(), GroupSettingsActivity::class.java).apply {
             putExtra(GroupSettingsActivity.EXTRA_GROUP_ID, group.id)
         })
