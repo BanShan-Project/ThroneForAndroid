@@ -2575,4 +2575,5 @@
     <string name="backup_warn_login_kept">登入訂閱不在備份中，已保留，並會重新從伺服器取得節點。</string>
     <string name="backup_warn_login_ignored">備份中的登入訂閱和節點已忽略。</string>
     <string name="backup_warn_login_lost">登入訂閱未能保留，請重新登入。</string>
+    <string name="backup_error_login_data">備份中包含登入訂閱，登入訂閱不會被恢復。</string>
 </resources>
