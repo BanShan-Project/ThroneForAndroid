@@ -1,16 +1,26 @@
 #### 2.0.8
 
+* 同步上游 2.0.6：DNS 隧道（DNSTT/VayDNS、MasterDNS/StormDNS、XDNS）、Xray mKCP、XDRIVE S3、WARP MASQUE 改进、内核升级
+* 保留半山登录、受保护订阅、备份安全、品牌与更新源
 * 解决了一些已知问题
 
 #### 2.0.7
 
 * 修复了一些已知BUG
 
-
 #### 2.0.6
 
 * 半山代理
+* Add DNS tunnels: DNSTT/VayDNS, MasterDNS/StormDNS and XDNS **1**
+* Add mKCP transport to Xray
+* Add S3 storage to XDRIVE
+* Improve WARP MASQUE over HTTP/3
+* Update sing-box, Xray and Go
+* Fix log export crashing in a loop
+* Fixes and Improvements
 
+**1**:
+Refer to the [documentation](https://throneproj.github.io/advanced/dns_tunnels/) for more details.
 
 #### 2.0.5
 
