@@ -1,8 +1,10 @@
+#### 2.0.9
+
+* 同步上游代码
+* 解决了一些已知问题
+
 #### 2.0.8
 
-* 同步上游 2.0.6：DNS 隧道（DNSTT/VayDNS、MasterDNS/StormDNS、XDNS）、Xray mKCP、XDRIVE S3、WARP MASQUE 改进、内核升级
-* 保留半山登录、受保护订阅、备份安全、品牌与更新源
-* 修复登录请求参数：按服务器要求提交 query 参数，解决 HTTP 500
 * 解决了一些已知问题
 
 #### 2.0.7
