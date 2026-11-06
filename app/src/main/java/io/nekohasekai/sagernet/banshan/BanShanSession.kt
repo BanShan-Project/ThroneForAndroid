@@ -1,7 +1,6 @@
 package io.nekohasekai.sagernet.banshan
 
 import android.os.SystemClock
-import io.nekohasekai.sagernet.BuildConfig
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.GroupRepo
@@ -29,8 +28,8 @@ import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * The BanShan login (the desktop's BanShanSubHandler): the account is checked against [LOGIN_URL], the subscription
- * address it answers with becomes a protected group of its own, and its profiles are downloaded into it.
+ * The BanShan login: `username` and `password` go to [LOGIN_URL] as a form POST, the subscription address in the
+ * answer's `data` field becomes a protected group of its own, and its profiles are downloaded into it.
  *
  * The group is independent of the subscriptions the user manages: its address is stored encrypted ([BanShanCrypto]),
  * it is not listed on the groups screen, and its group and profiles cannot be edited, deleted, moved or shared (the
@@ -41,7 +40,10 @@ import java.util.concurrent.atomic.AtomicReference
  */
 object BanShanSession {
 
-    const val LOGIN_URL = "https://proxy.yinshaoze.asia/banshanlogin.php"
+    const val LOGIN_URL = "https://proxy.yinshaoze.asia/get_sub"
+
+    /** The login server answers `code` 200 with the subscription address in `data`. */
+    private const val SUCCESS_CODE = 200
 
     /** What the account login reports while it runs, for the screen's progress line. */
     enum class Stage { SIGNING_IN, LOADING_NODES }
@@ -54,7 +56,6 @@ object BanShanSession {
         @JvmField val count: Int = 0,
     )
 
-    private const val CLIENT = "BanShanProxy"
     private const val FIRST_DOWNLOAD_TIMEOUT_MS = 90_000L
     private const val POLL_INTERVAL_MS = 250L
 
@@ -124,9 +125,12 @@ object BanShanSession {
             return@withContext LoginOutcome(false, message)
         }
         val subUrl = parsed.subUrl
-        if (parsed.code != 0 || subUrl.isNullOrEmpty()) {
+        if (parsed.code != SUCCESS_CODE) {
             val message = parsed.message.ifBlank { app.getString(R.string.banshan_login_rejected) }
             return@withContext LoginOutcome(false, message)
+        }
+        if (subUrl.isNullOrEmpty()) {
+            return@withContext LoginOutcome(false, app.getString(R.string.banshan_login_bad_url))
         }
         if (!isHttpUrl(subUrl)) {
             return@withContext LoginOutcome(false, app.getString(R.string.banshan_login_bad_url))
@@ -290,15 +294,13 @@ object BanShanSession {
     )
 
     /**
-     * The desktop's BanShanSubHandler.PostLoginAsync: a form POST straight out (never through the proxy), since no
-     * profile is configured yet on the first start.
+     * The account login: a form POST straight out (never through the proxy), since no profile is configured yet on the
+     * first start. The server reads `username` and `password`.
      */
     private fun postLogin(userName: String, password: String): HttpAnswer {
         val form = FormBody.Builder()
             .add("username", userName)
             .add("password", password)
-            .add("client", CLIENT)
-            .add("version", BuildConfig.VERSION_NAME)
             .build()
         val request = Request.Builder()
             .url(LOGIN_URL)
@@ -325,7 +327,11 @@ object BanShanSession {
         }
         val code = root.opt("code")?.toString()?.trim()?.toIntOrNull() ?: -1
         val message = root.stringOrNull("msg") ?: root.stringOrNull("message") ?: ""
-        val subUrl = findSubUrl(root) ?: root.optJSONObject("data")?.let(::findSubUrl)
+        // The current server puts the subscription address in `data` as a string; the older shape used `sub_url`
+        // (or an object in `data`), which stays supported.
+        val subUrl = root.stringOrNull("data")?.takeIf { isHttpUrl(it) }
+            ?: findSubUrl(root)
+            ?: root.optJSONObject("data")?.let(::findSubUrl)
         return Answer(code, message, subUrl)
     }
 
