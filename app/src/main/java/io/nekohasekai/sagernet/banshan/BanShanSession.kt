@@ -23,12 +23,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * The BanShan login: `username` and `password` go to [LOGIN_URL] as a form POST, the subscription address in the
+ * The BanShan login: `username` and `password` go to [LOGIN_URL] as a POST, the subscription address in the
  * answer's `data` field becomes a protected group of its own, and its profiles are downloaded into it.
  *
  * The group is independent of the subscriptions the user manages: its address is stored encrypted ([BanShanCrypto]),
@@ -294,16 +295,21 @@ object BanShanSession {
     )
 
     /**
-     * The account login: a form POST straight out (never through the proxy), since no profile is configured yet on the
-     * first start. The server reads `username` and `password`.
+     * The account login: a POST straight out (never through the proxy), since no profile is configured yet on the
+     * first start. The server reads `username` and `password` from the query string; the same fields also go in the
+     * form body so an updated server that reads the form keeps working.
      */
     private fun postLogin(userName: String, password: String): HttpAnswer {
+        val url = LOGIN_URL.toHttpUrl().newBuilder()
+            .addQueryParameter("username", userName)
+            .addQueryParameter("password", password)
+            .build()
         val form = FormBody.Builder()
             .add("username", userName)
             .add("password", password)
             .build()
         val request = Request.Builder()
-            .url(LOGIN_URL)
+            .url(url)
             .header("User-Agent", appUserAgent())
             .header("Accept", "*/*")
             .post(form)
